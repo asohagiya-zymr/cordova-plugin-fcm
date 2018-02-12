@@ -23,7 +23,7 @@
 // running iOS 10 and above. Implement FIRMessagingDelegate to receive data message via FCM for
 // devices running iOS 10 and above.
 #if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
-@interface AppDelegate () <UNUserNotificationCenterDelegate, FIRMessagingDelegate>
+@interface AppDelegate () <FIRMessagingDelegate>
 @end
 #endif
 
@@ -68,23 +68,9 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
         // iOS 8 or later
         // [START register_for_notifications]
         if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_9_x_Max) {
-            UIUserNotificationType allNotificationTypes =
-            (UIUserNotificationTypeSound | UIUserNotificationTypeAlert | UIUserNotificationTypeBadge);
-            UIUserNotificationSettings *settings =
-            [UIUserNotificationSettings settingsForTypes:allNotificationTypes categories:nil];
-            [[UIApplication sharedApplication] registerUserNotificationSettings:settings];
         } else {
             // iOS 10 or later
 #if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
-            UNAuthorizationOptions authOptions =
-            UNAuthorizationOptionAlert
-            | UNAuthorizationOptionSound
-            | UNAuthorizationOptionBadge;
-            [[UNUserNotificationCenter currentNotificationCenter] requestAuthorizationWithOptions:authOptions completionHandler:^(BOOL granted, NSError * _Nullable error) {
-            }];
-            
-            // For iOS 10 display notification (sent via APNS)
-            [UNUserNotificationCenter currentNotificationCenter].delegate = self;
             // For iOS 10 data message (sent via FCM)
             [FIRMessaging messaging].remoteMessageDelegate = self;
 #endif
