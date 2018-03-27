@@ -3,6 +3,8 @@ package com.gae.scaffolder.plugin;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
+import android.content.Context;
+import android.content.SharedPreferences;
 import org.apache.cordova.CordovaInterface;
 import android.util.Log;
 
@@ -96,6 +98,22 @@ public class FCMPlugin extends CordovaPlugin {
 						}
 					}
 				});
+			}
+			else if (action.equals("toggleNotificationStart")) {
+				Context ctx = cordova.getActivity();
+				String appId = ctx.getPackageName();
+				SharedPreferences sp = ctx.getSharedPreferences(appId + ".SharedPreferences", ctx.MODE_PRIVATE);
+				Boolean prevValue = sp.getBoolean("notificationStart", false);
+				SharedPreferences.Editor editor = sp.edit();
+				Boolean newValue = false;
+				if(args.length() > 0) {
+					newValue = args.getBoolean(0);
+				}
+				else {
+					newValue = !prevValue;
+				}
+				editor.putBoolean("notificationStart", newValue);
+				editor.commit();
 			}
 			else{
 				callbackContext.error("Method not found");

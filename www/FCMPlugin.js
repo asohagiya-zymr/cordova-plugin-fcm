@@ -42,6 +42,10 @@ FCMPlugin.prototype.onTokenRefreshReceived = function(token){
   console.log("Received token refresh")
   console.log(token)
 }
+// ENABLE OR DISABLE APP START FROM NOTIFICATION //
+FCMPlugin.prototype.toggleNotificationStart = function(enabled, success, error){
+	exec(success,error,"FCMPlugin", 'toggleNotificationStart', (typeof enabled === "undefined" || typeof enabled === "null") ? [] : [enabled]);
+}
 // FIRE READY //
 exec(function(result){ console.log("FCMPlugin Ready OK") }, function(result){ console.log("FCMPlugin Ready ERROR") }, "FCMPlugin",'ready',[]);
 

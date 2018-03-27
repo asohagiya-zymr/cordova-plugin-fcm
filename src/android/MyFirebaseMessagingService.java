@@ -4,6 +4,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.support.v4.app.NotificationCompat;
@@ -58,10 +59,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (data.size()==2){
             if (data.get("message")!=null){
                 try {
-
+                    String appId = getPackageName();
+                    SharedPreferences sp = getSharedPreferences(appId + ".SharedPreferences", MODE_PRIVATE);
+                    Boolean appStart = sp.getBoolean("notificationStart", false);
                     JSONObject messageData = new JSONObject(data.get("message").toString());
                     String notificationType = messageData.getString("type");
-                    if (notificationType!=null && notificationType.equals("call")){
+                    if (notificationType!=null && notificationType.equals("call") && appStart){
                         startActivity(new Intent(this, MainActivity.class));
                     }
                 } catch (JSONException e) {
