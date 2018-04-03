@@ -62,7 +62,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     JSONObject messageData = new JSONObject(data.get("message").toString());
                     String notificationType = messageData.getString("type");
                     if (notificationType!=null && notificationType.equals("call")){
-                        startActivity(new Intent(this, MainActivity.class));
+                        Intent intent = new Intent(this, MainActivity.class);
+                        intent.putExtra("cdvStartInBackground", true);
+                        startActivity(intent);
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
