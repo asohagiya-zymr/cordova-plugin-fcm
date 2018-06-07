@@ -6,8 +6,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.PowerManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import android.view.WindowManager;
+
 import java.util.Map;
 import java.util.HashMap;
 
@@ -62,9 +65,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     JSONObject messageData = new JSONObject(data.get("message").toString());
                     String notificationType = messageData.getString("type");
                     if (notificationType!=null && notificationType.equals("call")){
+                        PowerManager pm = (PowerManager)getSystemService(POWER_SERVICE);
+                        PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TRAININGCOUNTDOWN");
+                        wl.acquire();
                         Intent intent = new Intent(this, MainActivity.class);
                         intent.putExtra("cdvStartInBackground", true);
                         startActivity(intent);
+                        wl.release();
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
