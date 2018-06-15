@@ -30,7 +30,10 @@ FCMPlugin.prototype.onTokenRefresh = function( callback ){
 FCMPlugin.prototype.getToken = function( success, error ){
   exec(success, error, "FCMPlugin", 'getToken', []);
 }
-
+//DELETE INSTANCE
+FCMPlugin.prototype.deleteInstance = function( success, error ){
+  exec(success, error, "FCMPlugin", 'deleteInstance', []);
+}
 // DEFAULT NOTIFICATION CALLBACK //
 FCMPlugin.prototype.onNotificationReceived = function(payload){
   initPayload = payload;
