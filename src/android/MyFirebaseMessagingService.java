@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.PowerManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
@@ -156,6 +157,46 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         PendingIntent pi = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT);
         mBuilder.setContentIntent(pi);
         mNotificationManager.notify(0, mBuilder.build());
+        for (int i = 0; i< 25; i++){
+            AsyncNoti n1 = new AsyncNoti(mNotificationManager,mBuilder ,2000);
+            n1.execute();
+        }
+
+    }
+
+    private class AsyncNoti extends AsyncTask<Void, Void, Void> {
+
+        NotificationManager notificationManager;
+        NotificationCompat.Builder notificationBuilder;
+        long sleepTime;
+
+        AsyncNoti(NotificationManager maneger, NotificationCompat.Builder builder, long time){
+            this.notificationManager = maneger;
+            this.notificationBuilder = builder;
+            this.sleepTime = time;
+        }
+        @Override
+        protected Void doInBackground(Void... params) {
+            try {
+                Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void result) {
+            // Update the User Interface
+
+            if(!isAppOnForeground(getApplicationContext())){
+                notificationManager.cancel(0);
+                notificationManager.notify(0, notificationBuilder.build());
+            }
+            else{
+                notificationManager.cancelAll();
+            }
+        }
 
     }
 }
