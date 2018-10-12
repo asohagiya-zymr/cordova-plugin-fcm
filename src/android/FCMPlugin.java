@@ -15,6 +15,7 @@ import android.os.Bundle;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.iid.FirebaseInstanceId;
 
+import java.io.IOException;
 import java.util.Map;
 
 public class FCMPlugin extends CordovaPlugin {
@@ -90,6 +91,27 @@ public class FCMPlugin extends CordovaPlugin {
 					public void run() {
 						try{
 							FirebaseMessaging.getInstance().unsubscribeFromTopic( args.getString(0) );
+							callbackContext.success();
+						}catch(Exception e){
+							callbackContext.error(e.getMessage());
+						}
+					}
+				});
+			}
+			else if (action.equals("deleteInstance")){
+				cordova.getActivity().runOnUiThread(new Runnable() {
+					public void run() {
+						try{
+							new Thread(new Runnable() {
+								@Override
+								public void run() {
+									try {
+										FirebaseInstanceId.getInstance().deleteInstanceId();
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+								}
+							}).start();
 							callbackContext.success();
 						}catch(Exception e){
 							callbackContext.error(e.getMessage());
