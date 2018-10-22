@@ -67,22 +67,32 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     JSONObject messageData = new JSONObject(data.get("message").toString());
                     String notificationType = messageData.getString("type");
                     if (notificationType!=null && notificationType.equals("call")){
-                        PowerManager pm = (PowerManager)getSystemService(POWER_SERVICE);
-                        PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TRAININGCOUNTDOWN");
-                        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                        intent.putExtra("cdvStartInBackground", true);
-                        String firstName = messageData.getString("firstName");
-                        String lastName = messageData.getString("lastName");
-                        wakeLock.acquire(60000);
-                        Map<String, Object> data1 = new HashMap<String, Object>();
-                        data1.put("wasTapped", false);
-                        if(!isAppOnForeground(getApplicationContext())){
-                            sendNotification("Lifetiles Pro", "Call From: "+firstName +" "+lastName, data1);
-                        }
-                        startActivity(intent);
+                        long timeStamp = Long.parseLong(messageData.getString("time"));
+                        long currentTime = System.currentTimeMillis();
+                        boolean isFirstNotification = messageData.getBoolean("isFirstNotification");
+                        if ((currentTime-timeStamp)<2500){
+                            PowerManager pm = (PowerManager)getSystemService(POWER_SERVICE);
+                            PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TRAININGCOUNTDOWN");
+                            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            intent.putExtra("cdvStartInBackground", true);
+                            String firstName = messageData.getString("firstName");
+                            String lastName = messageData.getString("lastName");
+                            wakeLock.acquire(60000);
+                            Map<String, Object> data1 = new HashMap<String, Object>();
+                            data1.put("wasTapped", false);
+                            //startActivity(intent);
 
+                            sendNotification("Lifetiles Pro", "Call From: "+firstName +" "+lastName, data1);
+
+                            if(isFirstNotification){
+                                startActivity(intent);
+                            }
+
+                        }
                     }
+
+//                    }
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -156,11 +166,35 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pi = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT);
         mBuilder.setContentIntent(pi);
-        mNotificationManager.notify(0, mBuilder.build());
-        for (int i = 0; i< 25; i++){
-            AsyncNoti n1 = new AsyncNoti(mNotificationManager,mBuilder ,2000);
-            n1.execute();
+
+        if(!isAppOnForeground(getApplicationContext())){
+            mNotificationManager.cancel(0);
+            mNotificationManager.notify(0, mBuilder.build());
         }
+        else{
+            mNotificationManager.cancel(0);
+        }
+
+//        boolean notiFlag = true;
+//        for (int i = 0; i< 25; i++){
+//            try {
+//                Thread.sleep(2000);
+//                if(!isAppOnForeground(getApplicationContext())&&notiFlag){
+//                    mNotificationManager.cancel(0);
+//                    mNotificationManager.notify(0, mBuilder.build());
+//                }
+//                else{
+//                    mNotificationManager.cancelAll();
+//                    notiFlag = false;
+//                    break;
+//                }
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//
+////            AsyncNoti n1 = new AsyncNoti(mNotificationManager,mBuilder ,2000);
+////            n1.execute();
+//        }
 
     }
 
@@ -179,6 +213,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         protected Void doInBackground(Void... params) {
             try {
                 Thread.sleep(sleepTime);
+                if(!isAppOnForeground(getApplicationContext())){
+                    notificationManager.cancel(0);
+                    notificationManager.notify(0, notificationBuilder.build());
+                }
+                else{
+                    notificationManager.cancelAll();
+                }
             } catch (InterruptedException e) {
             }
 
@@ -189,13 +230,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         protected void onPostExecute(Void result) {
             // Update the User Interface
 
-            if(!isAppOnForeground(getApplicationContext())){
-                notificationManager.cancel(0);
-                notificationManager.notify(0, notificationBuilder.build());
-            }
-            else{
-                notificationManager.cancelAll();
-            }
+
         }
 
     }
