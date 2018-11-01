@@ -8,10 +8,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.RingtoneManager;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.PowerManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -66,30 +67,40 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     JSONObject messageData = new JSONObject(data.get("message").toString());
                     String notificationType = messageData.getString("type");
-                    if (notificationType!=null && notificationType.equals("call")){
-                        long timeStamp = Long.parseLong(messageData.getString("time"));
-                        long currentTime = System.currentTimeMillis();
-                        boolean isFirstNotification = messageData.getBoolean("isFirstNotification");
-                        if ((currentTime-timeStamp)<2500){
-                            PowerManager pm = (PowerManager)getSystemService(POWER_SERVICE);
-                            PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TRAININGCOUNTDOWN");
-                            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                            intent.putExtra("cdvStartInBackground", true);
+                    if (notificationType!=null ){
+                        if (notificationType.equals("call")){
+                            long timeStamp = Long.parseLong(messageData.getString("time"));
+                            long currentTime = System.currentTimeMillis();
+                            boolean isFirstNotification = messageData.getBoolean("isFirstNotification");
+                            if ((currentTime-timeStamp)<2500){
+                                PowerManager pm = (PowerManager)getSystemService(POWER_SERVICE);
+                                PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TRAININGCOUNTDOWN");
+                                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                                intent.putExtra("cdvStartInBackground", true);
+                                String firstName = messageData.getString("firstName");
+                                String lastName = messageData.getString("lastName");
+                                wakeLock.acquire(60000);
+                                Map<String, Object> data1 = new HashMap<String, Object>();
+                                data1.put("wasTapped", false);
+
+                                sendNotification("Lifetiles Pro", "Call From: "+firstName +" "+lastName, notificationType);
+
+                                if(isFirstNotification){
+                                    startActivity(intent);
+                                }
+
+                            }
+                        }
+                        else if (notificationType.equals("missedCall") || notificationType.equals("callerEndCall")){
+                            long timeStamp = Long.parseLong(messageData.getString("time"));
                             String firstName = messageData.getString("firstName");
                             String lastName = messageData.getString("lastName");
-                            wakeLock.acquire(60000);
                             Map<String, Object> data1 = new HashMap<String, Object>();
                             data1.put("wasTapped", false);
-                            //startActivity(intent);
-
-                            sendNotification("Lifetiles Pro", "Call From: "+firstName +" "+lastName, data1);
-
-                            if(isFirstNotification){
-                                startActivity(intent);
-                            }
-
+                            sendNotification("Lifetiles Pro", "Missed Call From: "+firstName +" "+lastName, notificationType);
                         }
+
                     }
 
 //                    }
@@ -119,28 +130,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
      *
      * @param content FCM message body received.
      */
-    private void sendNotification(String title, String content, Map<String, Object> data) {
-//        Intent intent = new Intent(this, FCMPluginActivity.class);
-//        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-//        for (String key : data.keySet()) {
-//            intent.putExtra(key, data.get(key).toString());
-//        }
-//        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
-//                PendingIntent.FLAG_ONE_SHOT);
-//
-//        Uri defaultSoundUri= RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-//        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this)
-//                .setSmallIcon(getApplicationInfo().icon)
-//                .setContentTitle(title)
-//                .setContentText(messageBody)
-//                .setAutoCancel(true)
-//                .setSound(defaultSoundUri)
-//                .setContentIntent(pendingIntent);
-//
-//        NotificationManager notificationManager =
-//                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-//
-//        notificationManager.notify(0 /* ID of notification */, notificationBuilder.build());
+    private void sendNotification(String title, String content, String notificationType) {
+
         Uri defaultSoundUri= RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         NotificationManager mNotificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -166,72 +157,22 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pi = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_ONE_SHOT);
         mBuilder.setContentIntent(pi);
-
-        if(!isAppOnForeground(getApplicationContext())){
-            mNotificationManager.cancel(0);
-            mNotificationManager.notify(0, mBuilder.build());
-        }
-        else{
-            mNotificationManager.cancel(0);
-        }
-
-//        boolean notiFlag = true;
-//        for (int i = 0; i< 25; i++){
-//            try {
-//                Thread.sleep(2000);
-//                if(!isAppOnForeground(getApplicationContext())&&notiFlag){
-//                    mNotificationManager.cancel(0);
-//                    mNotificationManager.notify(0, mBuilder.build());
-//                }
-//                else{
-//                    mNotificationManager.cancelAll();
-//                    notiFlag = false;
-//                    break;
-//                }
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-//
-////            AsyncNoti n1 = new AsyncNoti(mNotificationManager,mBuilder ,2000);
-////            n1.execute();
-//        }
-
-    }
-
-    private class AsyncNoti extends AsyncTask<Void, Void, Void> {
-
-        NotificationManager notificationManager;
-        NotificationCompat.Builder notificationBuilder;
-        long sleepTime;
-
-        AsyncNoti(NotificationManager maneger, NotificationCompat.Builder builder, long time){
-            this.notificationManager = maneger;
-            this.notificationBuilder = builder;
-            this.sleepTime = time;
-        }
-        @Override
-        protected Void doInBackground(Void... params) {
-            try {
-                Thread.sleep(sleepTime);
-                if(!isAppOnForeground(getApplicationContext())){
-                    notificationManager.cancel(0);
-                    notificationManager.notify(0, notificationBuilder.build());
-                }
-                else{
-                    notificationManager.cancelAll();
-                }
-            } catch (InterruptedException e) {
+        if(notificationType.equals("call")){
+            if(!isAppOnForeground(getApplicationContext())){
+                mNotificationManager.cancel(0);
+                mNotificationManager.notify(0, mBuilder.build());
             }
+            else{
+                mNotificationManager.cancel(0);
+            }
+        }
+        else if(notificationType.equals("missedCall")||notificationType.equals("callerEndCall")){
+            int id = (int)System.currentTimeMillis();
+            mNotificationManager.cancel(0);
+            mNotificationManager.notify(id, mBuilder.build());
 
-            return null;
         }
 
-        @Override
-        protected void onPostExecute(Void result) {
-            // Update the User Interface
-
-
-        }
 
     }
 }
