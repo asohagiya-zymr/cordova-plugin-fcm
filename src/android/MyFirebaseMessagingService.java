@@ -1,5 +1,6 @@
 package com.gae.scaffolder.plugin;
 
+import android.app.ActivityManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -7,15 +8,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.RingtoneManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.PowerManager;
-import android.provider.Settings;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+
 import java.util.Date;
 import java.util.List;
-
-import android.view.WindowManager;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -55,9 +53,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         Map<String, Object> data = new HashMap<String, Object>();
         data.put("wasTapped", false);
         for (String key : remoteMessage.getData().keySet()) {
-                Object value = remoteMessage.getData().get(key);
-                Log.d(TAG, "\tKey: " + key + " Value: " + value);
-                data.put(key, value);
+            Object value = remoteMessage.getData().get(key);
+            Log.d(TAG, "\tKey: " + key + " Value: " + value);
+            data.put(key, value);
         }
 
         Log.d(TAG, "\tNotification Data: " + data.toString());
@@ -69,7 +67,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                     JSONObject messageData = new JSONObject(data.get("message").toString());
                     String notificationType = messageData.getString("type");
-
                     if (notificationType!=null ){
                         if (notificationType.equals("call")){
                             long timeStamp = Long.parseLong(messageData.getString("time"));
@@ -104,10 +101,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             sendNotification("Lifetiles Pro", "Missed Call From: "+firstName +" "+lastName, notificationType);
                         }
 
-
-//                        Map<String, Object> data1 = new HashMap<String, Object>();
-//                        data1.put("wasTapped", false);
-                        //sendNotification("Lifetiles Pro", "Call from XXX", data1);
                     }
 
 //                    }
@@ -118,7 +111,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
     // [END receive_message]
-
+    private boolean isAppOnForeground(Context context) {
+        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningAppProcessInfo> appProcesses = activityManager.getRunningAppProcesses();
+        if (appProcesses == null) {
+            return false;
+        }
+        final String packageName = context.getPackageName();
+        for (ActivityManager.RunningAppProcessInfo appProcess : appProcesses) {
+            if (appProcess.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND && appProcess.processName.equals(packageName)) {
+                return true;
+            }
+        }
+        return false;
+    }
     /**
      * Create and show a simple notification containing the received FCM message.
      *
@@ -127,26 +133,25 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private void sendNotification(String title, String content, String notificationType) {
 
         Uri defaultSoundUri= RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-            NotificationManager mNotificationManager =
-                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                NotificationChannel channel = new NotificationChannel("default",
-                        "gcm",
-                        NotificationManager.IMPORTANCE_HIGH);
-                channel.setDescription("YOUR_NOTIFICATION_CHANNEL_DISCRIPTION");
-                channel.enableVibration(true);
-                channel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
-                mNotificationManager.createNotificationChannel(channel);
-            }
-            NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(getApplicationContext(), "default")
-                    .setSmallIcon(getApplicationInfo().icon) // notification icon
-                    .setContentTitle(title) // title for notification
-                    .setContentText(content)// message for notification
-                    .setSound(defaultSoundUri) // set alarm sound for notification
-                    .setAutoCancel(true) // clear notification after click
-                    .setPriority(4)
-                    .setVibrate(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
-
+        NotificationManager mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel("default",
+                    "gcm",
+                    NotificationManager.IMPORTANCE_HIGH);
+            channel.setDescription("YOUR_NOTIFICATION_CHANNEL_DISCRIPTION");
+            channel.enableVibration(true);
+            channel.setVibrationPattern(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
+            mNotificationManager.createNotificationChannel(channel);
+        }
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(getApplicationContext(), "default")
+                .setSmallIcon(getApplicationInfo().icon) // notification icon
+                .setContentTitle(title) // title for notification
+                .setContentText(content)// message for notification
+                .setSound(defaultSoundUri) // set alarm sound for notification
+                .setAutoCancel(true) // clear notification after click
+                .setPriority(4)
+                .setVibrate(new long[]{100, 200, 300, 400, 500, 400, 300, 200, 400});
 
         Intent intent = new Intent(getApplicationContext(), FCMPluginActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -167,7 +172,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             mNotificationManager.notify(id, mBuilder.build());
 
         }
-
 
 
     }
