@@ -52,25 +52,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         Map<String, Object> data = new HashMap<String, Object>();
         data.put("wasTapped", false);
-        data.put("inBackground", false);
         for (String key : remoteMessage.getData().keySet()) {
             Object value = remoteMessage.getData().get(key);
             Log.d(TAG, "\tKey: " + key + " Value: " + value);
             data.put(key, value);
         }
-        if (data.get("message")!=null){
-            try{
-                JSONObject messageData = new JSONObject(data.get("message").toString());
-                String notificationType = messageData.getString("type");
-                if (notificationType.equals("missedCall") || notificationType.equals("callerEndCall")){
-                    if(!isAppOnForeground(getApplicationContext())){
-                        data.put("inBackground", true);
-                    }
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
+
         Log.d(TAG, "\tNotification Data: " + data.toString());
         FCMPlugin.sendPushPayload( data );
         //sendNotification(remoteMessage.getNotification().getTitle(), remoteMessage.getNotification().getBody(), remoteMessage.getData());
