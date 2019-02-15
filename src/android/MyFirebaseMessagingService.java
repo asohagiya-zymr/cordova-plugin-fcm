@@ -72,7 +72,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             long timeStamp = Long.parseLong(messageData.getString("time"));
                             long currentTime = System.currentTimeMillis();
                             boolean isFirstNotification = messageData.getBoolean("isFirstNotification");
-                            if ((currentTime-timeStamp)<2500){
+                            if ((currentTime-timeStamp)<6000){
                                 PowerManager pm = (PowerManager)getSystemService(POWER_SERVICE);
                                 PowerManager.WakeLock wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "TRAININGCOUNTDOWN");
                                 Intent intent = new Intent(getApplicationContext(), MainActivity.class);
