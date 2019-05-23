@@ -98,7 +98,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             String lastName = messageData.getString("lastName");
                             Map<String, Object> data1 = new HashMap<String, Object>();
                             data1.put("wasTapped", false);
-                            sendNotification("Lifetiles Pro", "Missed Call From: "+firstName +" "+lastName, notificationType);
+                            String callType=messageData.getString("CommunicationType");
+                            String notificatonmsg= "Missed "+callType+" From :";
+                            sendNotification("Lifetiles Pro", notificatonmsg +firstName +" "+lastName, notificationType);
                         }
 
                     }
