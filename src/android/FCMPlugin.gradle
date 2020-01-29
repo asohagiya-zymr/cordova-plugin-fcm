@@ -12,5 +12,14 @@ buildscript {
     }
 }
 // apply plugin: 'com.google.gms.google-services'
+dependencies {
+    compile('com.crashlytics.sdk.android:crashlytics:2.9.1@aar') {
+       transitive = true
+    }
+}
+
+cdvPluginPostBuildExtras.add({
+    apply plugin: 'io.fabric'
+})
 // class must be used instead of id(string) to be able to apply plugin from non-root gradle file
 //apply plugin: com.google.gms.googleservices.GoogleServicesPlugin

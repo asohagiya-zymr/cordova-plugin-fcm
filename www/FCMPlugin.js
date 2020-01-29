@@ -48,9 +48,56 @@ FCMPlugin.prototype.onTokenRefreshReceived = function(token){
 // FIRE READY //
 exec(function(result){ console.log("FCMPlugin Ready OK") }, function(result){ console.log("FCMPlugin Ready ERROR") }, "FCMPlugin",'ready',[]);
 
+// CRASHLYTICS //
+FCMPlugin.prototype.crashlytics = {};
 
+FCMPlugin.prototype.crashlytics.logError = function(errorMessage, success, error) {
+    if(typeof success != "function") success = function(){};
+    if(typeof error != "function") error = function(){};
+    exec(success, error, "FCMPlugin", 'logError', [errorMessage]);
+}
 
+FCMPlugin.prototype.crashlytics.log = function(message, success, error) {
+    if(typeof success != "function") success = function(){};
+    if(typeof error != "function") error = function(){};
+    exec(success, error, "FCMPlugin", 'log', [message]);
+}
 
+FCMPlugin.prototype.crashlytics.setString = function(key, value, success, error) {
+    if(typeof success != "function") success = function(){};
+    if(typeof error != "function") error = function(){};
+    exec(success, error, "FCMPlugin", 'setString', [key, value]);
+}
+
+FCMPlugin.prototype.crashlytics.setBool = function(key, value, success, error) {
+    if(typeof success != "function") success = function(){};
+    if(typeof error != "function") error = function(){};
+    exec(success, error, "FCMPlugin", 'setBool', [key, value]);
+}
+
+FCMPlugin.prototype.crashlytics.setDouble = function(key, value, success, error) {
+    if(typeof success != "function") success = function(){};
+    if(typeof error != "function") error = function(){};
+    exec(success, error, "FCMPlugin", 'setDouble', [key, value]);
+}
+
+FCMPlugin.prototype.crashlytics.setFloat = function(key, value, success, error) {
+    if(typeof success != "function") success = function(){};
+    if(typeof error != "function") error = function(){};
+    exec(success, error, "FCMPlugin", 'setFloat', [key, value]);
+}
+
+FCMPlugin.prototype.crashlytics.setInt = function(key, value, success, error) {
+    if(typeof success != "function") success = function(){};
+    if(typeof error != "function") error = function(){};
+    exec(success, error, "FCMPlugin", 'setInt', [key, value]);
+}
+
+FCMPlugin.prototype.crashlytics.setUserId = function(userId, success, error) {
+    if(typeof success != "function") success = function(){};
+    if(typeof error != "function") error = function(){};
+    exec(success, error, "FCMPlugin", 'setCrashlyticsUserId', [userId]);
+}
 
 var fcmPlugin = new FCMPlugin();
 module.exports = fcmPlugin;

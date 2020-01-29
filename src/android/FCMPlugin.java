@@ -1,5 +1,8 @@
 package com.gae.scaffolder.plugin;
 
+import com.crashlytics.android.Crashlytics;
+import io.fabric.sdk.android.Fabric;
+import com.google.firebase.FirebaseApp;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -32,6 +35,11 @@ public class FCMPlugin extends CordovaPlugin {
 	
 	public void initialize(CordovaInterface cordova, CordovaWebView webView) {
 		super.initialize(cordova, webView);
+		cordova.getThreadPool().execute(new Runnable() {
+            public void run() {
+				FirebaseApp.initializeApp(cordova.getActivity().getApplicationContext());
+			}
+		});
 		gWebView = webView;
 		Log.d(TAG, "==> FCMPlugin initialize");
 		FirebaseMessaging.getInstance().subscribeToTopic("android");
@@ -114,6 +122,117 @@ public class FCMPlugin extends CordovaPlugin {
 							}).start();
 							callbackContext.success();
 						}catch(Exception e){
+							callbackContext.error(e.getMessage());
+						}
+					}
+				});
+			}
+			else if (action.equals("logError")) {
+				cordova.getThreadPool().execute(new Runnable() {
+					public void run() {
+						try {
+							Crashlytics.logException(new Exception(args.getString(0)));
+							callbackContext.success();
+						} catch (Exception e) {
+							Crashlytics.log(e.getMessage());
+							e.printStackTrace();
+							callbackContext.error(e.getMessage());
+						}
+					}
+				});
+			}
+			else if (action.equals("log")) {
+				cordova.getThreadPool().execute(new Runnable() {
+					public void run() {
+						try {
+							Crashlytics.log(args.getString(0));
+							callbackContext.success();
+						} catch (Exception e) {
+							Crashlytics.logException(new Exception(e.getMessage()));
+							e.printStackTrace();
+							callbackContext.error(e.getMessage());
+						}
+					}
+				});
+			}
+			else if (action.equals("setString")) {
+				cordova.getThreadPool().execute(new Runnable() {
+					public void run() {
+						try {
+							Crashlytics.setString(args.getString(0), args.getString(1));
+							callbackContext.success();
+						} catch (Exception e) {
+							Crashlytics.log(e.getMessage());
+							e.printStackTrace();
+							callbackContext.error(e.getMessage());
+						}
+					}
+				});
+			}
+			else if (action.equals("setBool")) {
+				cordova.getThreadPool().execute(new Runnable() {
+					public void run() {
+						try {
+							Crashlytics.setBool(args.getString(0), args.getBoolean(1));
+							callbackContext.success();
+						} catch (Exception e) {
+							Crashlytics.log(e.getMessage());
+							e.printStackTrace();
+							callbackContext.error(e.getMessage());
+						}
+					}
+				});
+			}
+			else if (action.equals("setDouble")) {
+				cordova.getThreadPool().execute(new Runnable() {
+					public void run() {
+						try {
+							Crashlytics.setDouble(args.getString(0), args.getDouble(1));
+							callbackContext.success();
+						} catch (Exception e) {
+							Crashlytics.log(e.getMessage());
+							e.printStackTrace();
+							callbackContext.error(e.getMessage());
+						}
+					}
+				});
+			}
+			else if (action.equals("setFloat")) {
+				cordova.getThreadPool().execute(new Runnable() {
+					public void run() {
+						try {
+							Crashlytics.setFloat(args.getString(0), (float) args.getDouble(1));
+							callbackContext.success();
+						} catch (Exception e) {
+							Crashlytics.log(e.getMessage());
+							e.printStackTrace();
+							callbackContext.error(e.getMessage());
+						}
+					}
+				});
+			}
+			else if (action.equals("setInt")) {
+				cordova.getThreadPool().execute(new Runnable() {
+					public void run() {
+						try {
+							Crashlytics.setInt(args.getString(0), args.getInt(1));
+							callbackContext.success();
+						} catch (Exception e) {
+							Crashlytics.log(e.getMessage());
+							e.printStackTrace();
+							callbackContext.error(e.getMessage());
+						}
+					}
+				});
+			}
+			else if (action.equals("setCrashlyticsUserId")) {
+				cordova.getActivity().runOnUiThread(new Runnable() {
+					public void run() {
+						try {
+							Crashlytics.setUserIdentifier(args.getString(0));
+							callbackContext.success();
+						} catch (Exception e) {
+							Crashlytics.logException(e);
 							callbackContext.error(e.getMessage());
 						}
 					}
