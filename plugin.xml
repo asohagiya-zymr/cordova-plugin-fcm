@@ -110,15 +110,15 @@
 		<!-- FIREBASE LIBS -->
 		<header-file src="src/ios/firebase/Firebase.h" />
 		<framework src="src/ios/firebase/FirebaseAnalytics.framework" custom="true" />
-		<framework src="src/ios/firebase/FirebaseCore.framework" custom="true" />
-		<framework src="src/ios/firebase/FirebaseInstanceID.framework" custom="true" />
-		<framework src="src/ios/firebase/FirebaseMessaging.framework" custom="true" />
+		<!-- <framework src="src/ios/firebase/FirebaseCore.framework" custom="true" /> -->
+		<!-- <framework src="src/ios/firebase/FirebaseInstanceID.framework" custom="true" /> -->
+		<!-- <framework src="src/ios/firebase/FirebaseMessaging.framework" custom="true" /> -->
 		<framework src="src/ios/firebase/GoogleInterchangeUtilities.framework" custom="true" />
 		<framework src="src/ios/firebase/GoogleIPhoneUtilities.framework" custom="true" />
 		<framework src="src/ios/firebase/GoogleSymbolUtilities.framework" custom="true" />
 		<framework src="src/ios/firebase/GoogleUtilities.framework" custom="true" />
 		<framework custom="true" src="src/ios/firebase/Crashlytics.framework" />
-		<framework custom="true" src="src/ios/firebase/Fabric.framework" />
+		<!-- <framework custom="true" src="src/ios/firebase/Fabric.framework" /> -->
 			
 		<!-- OTHER NEEDED LIBS -->
 		<framework src="libc++.tbd" />
@@ -135,6 +135,7 @@
 			</config>
 			<pods use-frameworks="true">
 				<pod name="Fabric" spec="1.10.2"/>
+				<pod name="Firebase/Messaging" spec="4.0.0" />
 			</pods>
 		</podspec>
     </platform>

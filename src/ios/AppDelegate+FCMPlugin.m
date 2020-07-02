@@ -35,6 +35,7 @@
 @implementation AppDelegate (MCPlugin)
 
 static NSData *lastPush;
+static NSString *apnsToken;
 NSString *const kGCMMessageIDKey = @"gcm.message_id";
 
 //Method swizzling
@@ -43,6 +44,36 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     Method original =  class_getInstanceMethod(self, @selector(application:didFinishLaunchingWithOptions:));
     Method custom =    class_getInstanceMethod(self, @selector(application:customDidFinishLaunchingWithOptions:));
     method_exchangeImplementations(original, custom);
+}
+
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceTokenData {
+    [FIRMessaging messaging].APNSToken = deviceTokenData;
+    NSString *deviceToken;
+    if (@available(iOS 13, *)) {
+        deviceToken = [self hexadecimalStringFromData:deviceTokenData];
+    } else {
+        deviceToken = [[[[deviceTokenData description]
+            stringByReplacingOccurrencesOfString:@"<"withString:@""]
+            stringByReplacingOccurrencesOfString:@">" withString:@""]
+            stringByReplacingOccurrencesOfString:@" " withString:@""];
+    }
+    apnsToken = deviceToken;
+    [FCMPlugin setInitialAPNSToken:deviceToken];
+    NSLog(@"Device APNS Token: %@", deviceToken);
+}
+- (NSString *)hexadecimalStringFromData:(NSData *)data
+{
+    NSUInteger dataLength = data.length;
+    if (dataLength == 0) {
+        return nil;
+    }
+
+    const unsigned char *dataBuffer = data.bytes;
+    NSMutableString *hexString  = [NSMutableString stringWithCapacity:(dataLength * 2)];
+    for (int i = 0; i < dataLength; ++i) {
+        [hexString appendFormat:@"%02x", dataBuffer[i]];
+    }
+    return [hexString copy];
 }
 
 - (BOOL)application:(UIApplication *)application customDidFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
