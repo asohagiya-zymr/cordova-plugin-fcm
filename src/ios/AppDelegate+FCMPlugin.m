@@ -103,7 +103,7 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
             // iOS 10 or later
 #if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
             // For iOS 10 data message (sent via FCM)
-            [FIRMessaging messaging].remoteMessageDelegate = self;
+            [FIRMessaging messaging].delegate = self;
 #endif
         }
         

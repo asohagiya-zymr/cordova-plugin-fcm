@@ -135,7 +135,7 @@
 			</config>
 			<pods use-frameworks="true">
 				<pod name="Fabric" spec="1.10.2"/>
-				<pod name="Firebase/Messaging" spec="4.0.0" />
+				<pod name="Firebase/Messaging" spec="5.0.0" />
 			</pods>
 		</podspec>
     </platform>
