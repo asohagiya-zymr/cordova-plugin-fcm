@@ -109,7 +109,7 @@
 		
 		<!-- FIREBASE LIBS -->
 		<header-file src="src/ios/firebase/Firebase.h" />
-		<framework src="src/ios/firebase/FirebaseAnalytics.framework" custom="true" />
+		<!-- <framework src="src/ios/firebase/FirebaseAnalytics.framework" custom="true" /> -->
 		<!-- <framework src="src/ios/firebase/FirebaseCore.framework" custom="true" /> -->
 		<!-- <framework src="src/ios/firebase/FirebaseInstanceID.framework" custom="true" /> -->
 		<!-- <framework src="src/ios/firebase/FirebaseMessaging.framework" custom="true" /> -->
@@ -136,6 +136,7 @@
 			<pods use-frameworks="true">
 				<pod name="Fabric" spec="1.10.2"/>
 				<pod name="Firebase/Messaging" spec="5.0.0" />
+				<pod name="Firebase/Analytics" spec="5.0.0" />
 			</pods>
 		</podspec>
     </platform>
