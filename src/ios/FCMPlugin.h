@@ -7,10 +7,8 @@
 }
 
 + (FCMPlugin *) fcmPlugin;
-+ (void)setInitialAPNSToken:(NSString*) token;
 - (void)ready:(CDVInvokedUrlCommand*)command;
 - (void)getToken:(CDVInvokedUrlCommand*)command;
-- (void)getAPNSToken:(CDVInvokedUrlCommand*)command;
 - (void)subscribeToTopic:(CDVInvokedUrlCommand*)command;
 - (void)unsubscribeFromTopic:(CDVInvokedUrlCommand*)command;
 - (void)registerNotification:(CDVInvokedUrlCommand*)command;
@@ -26,5 +24,9 @@
 - (void)setFloat:(CDVInvokedUrlCommand*)command;
 - (void)setInt:(CDVInvokedUrlCommand*)command;
 - (void)setCrashlyticsUserId:(CDVInvokedUrlCommand*)command;
+
+//Call management functions
+- (void) callStartRing:(CDVInvokedUrlCommand*)command;
+- (void) callStopRing:(CDVInvokedUrlCommand*)command;
 
 @end

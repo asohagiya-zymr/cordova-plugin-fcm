@@ -19,18 +19,11 @@ static BOOL appInForeground = YES;
 
 static NSString *notificationCallback = @"FCMPlugin.onNotificationReceived";
 static NSString *tokenRefreshCallback = @"FCMPlugin.onTokenRefreshReceived";
-static NSString *apnsToken = nil;
 static FCMPlugin *fcmPluginInstance;
 
 + (FCMPlugin *) fcmPlugin {
     
     return fcmPluginInstance;
-}
-
-+ (void) setInitialAPNSToken:(NSString *)token
-{
-    NSLog(@"setInitialAPNSToken token: %@", token);
-    apnsToken = token;
 }
 
 - (void) ready:(CDVInvokedUrlCommand *)command
@@ -54,17 +47,6 @@ static FCMPlugin *fcmPluginInstance;
         NSString* token = [[FIRInstanceID instanceID] token];
         CDVPluginResult* pluginResult = nil;
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:token];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-    }];
-}
-
-// GET APNS TOKEN //
-- (void) getAPNSToken:(CDVInvokedUrlCommand *)command 
-{
-    NSLog(@"get APNS Token");
-    [self.commandDelegate runInBackground:^{
-        CDVPluginResult* pluginResult = nil;
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:apnsToken];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
     }];
 }
@@ -226,6 +208,24 @@ static FCMPlugin *fcmPluginInstance;
     [CrashlyticsKit setUserIdentifier:userId];
     CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+
+- (void) callStartRing:(CDVInvokedUrlCommand*)command {
+    NSString* name = [command.arguments objectAtIndex:0];
+    BOOL isVideo = [[command.arguments objectAtIndex:1] boolValue];
+    [AppDelegate startRing:isVideo withName:name];
+}
+- (void) callStopRing:(CDVInvokedUrlCommand*)command {
+    if([command.arguments count] > 0) {
+        BOOL isMissed = [[command.arguments objectAtIndex:0] boolValue];
+        NSString* name = [command.arguments objectAtIndex:1];
+        BOOL isVideo = [[command.arguments objectAtIndex:2] boolValue];
+        [AppDelegate stopRing:isMissed isVideo:isVideo from:name];
+    }
+    else {
+        [AppDelegate stopRing];
+    }
 }
 
 @end

@@ -35,7 +35,9 @@
 @implementation AppDelegate (MCPlugin)
 
 static NSData *lastPush;
-static NSString *apnsToken;
+static Boolean isRinging;
+static Boolean stopRinging;
+static AppDelegate *this;
 NSString *const kGCMMessageIDKey = @"gcm.message_id";
 
 //Method swizzling
@@ -46,42 +48,14 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     method_exchangeImplementations(original, custom);
 }
 
-- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceTokenData {
-    [FIRMessaging messaging].APNSToken = deviceTokenData;
-    NSString *deviceToken;
-    if (@available(iOS 13, *)) {
-        deviceToken = [self hexadecimalStringFromData:deviceTokenData];
-    } else {
-        deviceToken = [[[[deviceTokenData description]
-            stringByReplacingOccurrencesOfString:@"<"withString:@""]
-            stringByReplacingOccurrencesOfString:@">" withString:@""]
-            stringByReplacingOccurrencesOfString:@" " withString:@""];
-    }
-    apnsToken = deviceToken;
-    [FCMPlugin setInitialAPNSToken:deviceToken];
-    NSLog(@"Device APNS Token: %@", deviceToken);
-}
-- (NSString *)hexadecimalStringFromData:(NSData *)data
-{
-    NSUInteger dataLength = data.length;
-    if (dataLength == 0) {
-        return nil;
-    }
-
-    const unsigned char *dataBuffer = data.bytes;
-    NSMutableString *hexString  = [NSMutableString stringWithCapacity:(dataLength * 2)];
-    for (int i = 0; i < dataLength; ++i) {
-        [hexString appendFormat:@"%02x", dataBuffer[i]];
-    }
-    return [hexString copy];
-}
-
 - (BOOL)application:(UIApplication *)application customDidFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
 
     [self application:application customDidFinishLaunchingWithOptions:launchOptions];
 
     NSLog(@"DidFinishLaunchingWithOptions");
- 
+    isRinging = false;
+    stopRinging = false;
+    this = self;
     
     // Register for remote notifications. This shows a permission dialog on first run, to
     // show the dialog at a more appropriate time move this registration accordingly.
@@ -103,7 +77,7 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
             // iOS 10 or later
 #if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
             // For iOS 10 data message (sent via FCM)
-            [FIRMessaging messaging].delegate = self;
+            [FIRMessaging messaging].remoteMessageDelegate = self;
 #endif
         }
         
@@ -127,6 +101,108 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
                                                  name:@"AppNotificationAction"
                                                object:nil];
     return YES;
+}
+
++ (NSString *)hexadecimalStringFromData:(NSData *)data
+{
+  NSUInteger dataLength = data.length;
+  if (dataLength == 0) {
+    return nil;
+  }
+
+  const unsigned char *dataBuffer = (const unsigned char *)data.bytes;
+  NSMutableString *hexString  = [NSMutableString stringWithCapacity:(dataLength * 2)];
+  for (int i = 0; i < dataLength; ++i) {
+    [hexString appendFormat:@"%02x", dataBuffer[i]];
+  }
+  return [hexString copy];
+}
+
+- (void)application:(UIApplication *)app didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken { 
+    NSString *str = [NSString stringWithFormat:@"Device Token=%@",deviceToken];
+    NSLog(@"This is device token%@", deviceToken);
+}
+
+//Incoming call presentation functions
+
++ (void) startRing:(Boolean)isVideo withName:(NSString *)name {
+    
+    //Mutex, prevent running start ring twice
+    @synchronized (self) {
+        if(isRinging) {
+            return;
+        }
+        
+        isRinging = true;
+    }
+    [this ring:isVideo withName:name withCount:0];
+}
+
++ (void) stopRing:(Boolean) isMissed isVideo:(Boolean)isVideo from:(NSString *)name {
+    stopRinging = true;
+    if(isMissed) {
+        [this missedCallNotificaion:isVideo from:name];
+    }
+}
+
++ (void) stopRing {
+    stopRinging = true;
+}
+
+- (void) missedCallNotificaion:(Boolean) isVideo from:(NSString*) name {
+    UNMutableNotificationContent *objNotificationContent = [[UNMutableNotificationContent alloc] init];
+    objNotificationContent.title = [NSString localizedUserNotificationStringForKey:@"Missed Call" arguments:nil];
+    objNotificationContent.body = [NSString localizedUserNotificationStringForKey:name arguments:nil];
+    objNotificationContent.sound = [UNNotificationSound defaultSound];
+    objNotificationContent.badge = @([[UIApplication sharedApplication] applicationIconBadgeNumber] + 1);
+    UNTimeIntervalNotificationTrigger *trigger =  [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:0.1f repeats:NO];
+    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:[@"missedcall" stringByAppendingString:[NSString stringWithFormat:@"%f", [[NSDate date] timeIntervalSince1970]]] content:objNotificationContent trigger:trigger];
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    [center addNotificationRequest:request withCompletionHandler:^(NSError * _Nullable error) {
+        if (error) {
+            NSLog(@"Failed to send missed call notification!");
+        }
+    }];
+}
+
+- (void) ring:(Boolean)isVideo withName:(NSString *)name withCount:(int)count {
+    dispatch_time_t interval = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC));
+    
+    int numLoops = 8;
+
+    //TODO: delete delivered/scheduled incoming call notification
+    
+    @synchronized (self) {
+        if(stopRinging) {
+            isRinging = false;
+            stopRinging = false;
+            [[UNUserNotificationCenter currentNotificationCenter] removeDeliveredNotificationsWithIdentifiers:[NSArray arrayWithObject:@"incomingcall"]];
+            return;
+        }
+    }
+    
+    if(count >= numLoops) {
+        isRinging = false;
+        [self missedCallNotificaion:isVideo from:name];
+        return;
+    }
+    //TODO: set different title for video calls.
+    UNMutableNotificationContent *objNotificationContent = [[UNMutableNotificationContent alloc] init];
+    objNotificationContent.title = [NSString localizedUserNotificationStringForKey:@"Incoming Call" arguments:nil];
+    objNotificationContent.body = [NSString localizedUserNotificationStringForKey:name arguments:nil];
+    objNotificationContent.sound = [UNNotificationSound soundNamed:@"Ringtone.caf"];
+    UNTimeIntervalNotificationTrigger *trigger =  [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:0.1f repeats:NO];
+    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:@"incomingcall" content:objNotificationContent trigger:trigger];
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    [center addNotificationRequest:request withCompletionHandler:^(NSError * _Nullable error) {
+        if (error) {
+            NSLog(@"Failed to send incoming call notification");
+        }
+    }];
+    
+    dispatch_after(interval, dispatch_get_main_queue(), ^(void){
+        [self ring:isVideo withName:name withCount:count+1];
+    });
 }
 
 // [START message_handling]
@@ -184,6 +260,36 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
 
     
     //completionHandler();
+}
+
+// Receive background notification
+- (void)application:(UIApplication *)application
+didReceiveRemoteNotification:(NSDictionary *)userInfo 
+fetchCompletionHandler:(void (^)(UIBackgroundFetchResult result))completionHandler {
+//    UILocalNotification *notification = [[UILocalNotification alloc] init];
+//    notification.fireDate = [NSDate dateWithTimeIntervalSinceNow:7];
+//    notification.alertBody = @"BG notification received!";
+//    notification.timeZone = [NSTimeZone defaultTimeZone];
+//    notification.soundName = UILocalNotificationDefaultSoundName;
+//
+//    [[UIApplication sharedApplication] scheduleLocalNotification:notification];
+    
+    if([(NSString *)userInfo[@"type"] isEqualToString:@"incomingCall"]) {
+        dispatch_time_t executionTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(30 * NSEC_PER_SEC));
+        dispatch_after(executionTime, dispatch_get_main_queue(), ^(void){
+            completionHandler(UIBackgroundFetchResultNewData);
+        });
+        [AppDelegate startRing:(Boolean)userInfo[@"isVideo"] withName:(NSString *)userInfo[@"name"]];
+    }
+    else if([(NSString *)userInfo[@"type"] isEqualToString:@"stopIncomingCall"] && isRinging) {
+        [AppDelegate stopRing:true isVideo:(Boolean)userInfo[@"isVideo"] from:(NSString *)userInfo[@"name"]];
+    }
+    else {
+        completionHandler(UIBackgroundFetchResultNoData);
+        return;
+    }
+    
+    
 }
 
 // [START refresh_token]
