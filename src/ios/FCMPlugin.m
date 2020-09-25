@@ -104,6 +104,22 @@ static FCMPlugin *fcmPluginInstance;
     }
 }
 
+-(void) notifyOfAction:(NSString *)actionIdentifier {
+    if([actionIdentifier isEqualToString:@"INCOMING_CALL_ACCEPT_ACTION"]) {
+        [AppDelegate stopRing];
+        //Global variable in window can be used to handle accepting calls before initialization is complete
+        [self.webViewEngine evaluateJavaScript:@"window.callAccepted = true;FCMPlugin.call._callAcceptHandler();" completionHandler:nil];
+    }
+    else if([actionIdentifier isEqualToString:@"INCOMING_CALL_DECLINE_ACTION"]) {
+        [AppDelegate stopRing];
+        //Global variable in window can be used to handle declining calls before initialization is complete
+        [self.webViewEngine evaluateJavaScript:@"window.callDeclined = true;FCMPlugin.call._callDeclineHandler();" completionHandler:nil];
+    }
+    else {
+        //default
+    }
+}
+
 -(void) notifyOfTokenRefresh:(NSString *)token
 {
     NSString * notifyJS = [NSString stringWithFormat:@"%@('%@');", tokenRefreshCallback, token];

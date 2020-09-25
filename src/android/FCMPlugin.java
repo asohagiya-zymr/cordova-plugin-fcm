@@ -238,6 +238,10 @@ public class FCMPlugin extends CordovaPlugin {
 					}
 				});
 			}
+			else if (action.equals("callStartRing") || action.equals("callStopRing")) {
+				callbackContext.error("Method only available on iOS");
+				return false;
+			}
 			else{
 				callbackContext.error("Method not found");
 				return false;

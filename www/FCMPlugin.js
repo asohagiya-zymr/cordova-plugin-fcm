@@ -107,5 +107,50 @@ FCMPlugin.prototype.crashlytics.setUserId = function(userId, success, error) {
     exec(success, error, "FCMPlugin", 'setCrashlyticsUserId', [userId]);
 }
 
+FCMPlugin.prototype.call = {};
+
+FCMPlugin.prototype.call.startRing = function(name, isVideo, success, error) {
+    if(typeof success != "function") success = function(){};
+    if(typeof error != "function") error = function(){};
+    exec(success, error, "FCMPlugin", 'callStartRing', [name, isVideo]);
+}
+
+FCMPlugin.prototype.call.stopRing = function(isMissed, name, isVideo, success, error) {
+    if(typeof success != "function") success = function(){};
+    if(typeof error != "function") error = function(){};
+    if(isMissed) {
+        exec(success, error, "FCMPlugin", 'callStopRing', [isMissed, name, isVideo]);
+    }
+    else {
+        exec(success, error, "FCMPlugin", 'callStopRing', []);
+    }
+}
+
+FCMPlugin.prototype.call._callAcceptHandler = function(){
+    console.log("Call Accepted");
+}
+
+FCMPlugin.prototype.call._callDeclineHandler = function(){
+    console.log("Call Accepted");
+}
+
+FCMPlugin.prototype.call.setCallAcceptHandler = function(callback, success, error) {
+    if(typeof callback == "function") {
+        FCMPlugin.prototype.call._callAcceptHandler = callback;
+        success();
+        return;
+    }
+    error();
+}
+
+FCMPlugin.prototype.call.setCallDeclineHandler = function(callback, success, error) {
+    if(typeof callback == "function") {
+        FCMPlugin.prototype.call._callDeclineHandler = callback;
+        success();
+        return;
+    }
+    error();
+}
+
 var fcmPlugin = new FCMPlugin();
 module.exports = fcmPlugin;

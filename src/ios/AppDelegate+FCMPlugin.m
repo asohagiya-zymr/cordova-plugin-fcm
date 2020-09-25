@@ -9,6 +9,7 @@
 #import "FCMPlugin.h"
 #import <objc/runtime.h>
 #import <Foundation/Foundation.h>
+#import <AVFoundation/AVFoundation.h>
 
 #import "Firebase.h"
 
@@ -38,6 +39,10 @@ static NSData *lastPush;
 static Boolean isRinging;
 static Boolean stopRinging;
 static AppDelegate *this;
+static UNNotificationCategory* incomingCallCategory;
+static NSURL *ringtoneURL;
+static SystemSoundID ringtoneID;
+
 NSString *const kGCMMessageIDKey = @"gcm.message_id";
 
 //Method swizzling
@@ -56,6 +61,22 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     isRinging = false;
     stopRinging = false;
     this = self;
+    //Set notification categories
+    UNNotificationAction* acceptAction = [UNNotificationAction actionWithIdentifier:@"INCOMING_CALL_ACCEPT_ACTION" title:@"Accept" options:(UNNotificationActionOptionForeground)];
+    UNNotificationAction* declineAction = [UNNotificationAction actionWithIdentifier:@"INCOMING_CALL_DECLINE_ACTION" title:@"Decline" options:(UNNotificationActionOptionDestructive)];
+    UNNotificationCategoryOptions notificationCategoryOptions = UNNotificationCategoryOptionCustomDismissAction;
+    if (@available(iOS 11.0, *)) {
+        notificationCategoryOptions = (UNNotificationCategoryOptionCustomDismissAction | UNNotificationCategoryOptionHiddenPreviewsShowSubtitle | UNNotificationCategoryOptionHiddenPreviewsShowTitle);
+    }
+    incomingCallCategory = [UNNotificationCategory categoryWithIdentifier:@"FCM_INCOMING_CALL" actions:[NSArray<UNNotificationAction *> arrayWithObjects:acceptAction, declineAction, nil] intentIdentifiers:@[] options:notificationCategoryOptions];
+    [[UNUserNotificationCenter currentNotificationCenter] getNotificationCategoriesWithCompletionHandler:^(NSSet<UNNotificationCategory *> * _Nonnull categories) {
+        NSMutableSet<UNNotificationCategory *> *newCategorySet = [[NSMutableSet<UNNotificationCategory *> alloc] initWithSet:categories];
+        [newCategorySet addObject:incomingCallCategory];
+        [[UNUserNotificationCenter currentNotificationCenter] setNotificationCategories:newCategorySet];
+    }];
+    ringtoneURL = [NSBundle.mainBundle URLForResource:@"Ringtone" withExtension:@"caf"];
+    CFURLRef ringtoneCFURL = (CFURLRef)CFBridgingRetain(ringtoneURL);
+    OSStatus error = AudioServicesCreateSystemSoundID(ringtoneCFURL, &ringtoneID);
     
     // Register for remote notifications. This shows a permission dialog on first run, to
     // show the dialog at a more appropriate time move this registration accordingly.
@@ -77,7 +98,7 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
             // iOS 10 or later
 #if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
             // For iOS 10 data message (sent via FCM)
-            [FIRMessaging messaging].remoteMessageDelegate = self;
+            [FIRMessaging messaging].delegate = self;
 #endif
         }
         
@@ -151,7 +172,7 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
 
 - (void) missedCallNotificaion:(Boolean) isVideo from:(NSString*) name {
     UNMutableNotificationContent *objNotificationContent = [[UNMutableNotificationContent alloc] init];
-    objNotificationContent.title = [NSString localizedUserNotificationStringForKey:@"Missed Call" arguments:nil];
+    objNotificationContent.title = [NSString localizedUserNotificationStringForKey:isVideo ? @"Missed Call" : @"Missed Video Call" arguments:nil];
     objNotificationContent.body = [NSString localizedUserNotificationStringForKey:name arguments:nil];
     objNotificationContent.sound = [UNNotificationSound defaultSound];
     objNotificationContent.badge = @([[UIApplication sharedApplication] applicationIconBadgeNumber] + 1);
@@ -169,34 +190,36 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     dispatch_time_t interval = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC));
     
     int numLoops = 8;
-
-    //TODO: delete delivered/scheduled incoming call notification
     
     @synchronized (self) {
-        if(stopRinging) {
+        if(stopRinging || count >= numLoops) {
             isRinging = false;
             stopRinging = false;
             [[UNUserNotificationCenter currentNotificationCenter] removeDeliveredNotificationsWithIdentifiers:[NSArray arrayWithObject:@"incomingcall"]];
+            if(count >= numLoops) {
+                [self missedCallNotificaion:isVideo from:name];
+            }
             return;
         }
     }
     
-    if(count >= numLoops) {
-        isRinging = false;
-        [self missedCallNotificaion:isVideo from:name];
-        return;
-    }
     //TODO: set different title for video calls.
     UNMutableNotificationContent *objNotificationContent = [[UNMutableNotificationContent alloc] init];
-    objNotificationContent.title = [NSString localizedUserNotificationStringForKey:@"Incoming Call" arguments:nil];
+    objNotificationContent.title = [NSString localizedUserNotificationStringForKey:isVideo ? @"Incoming Call" : @"Incoming Video Call" arguments:nil];
     objNotificationContent.body = [NSString localizedUserNotificationStringForKey:name arguments:nil];
-    objNotificationContent.sound = [UNNotificationSound soundNamed:@"Ringtone.caf"];
+    objNotificationContent.categoryIdentifier = incomingCallCategory.identifier;
+    objNotificationContent.sound = [UNNotificationSound soundNamed:@"Blank.caf"];
     UNTimeIntervalNotificationTrigger *trigger =  [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:0.1f repeats:NO];
     UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:@"incomingcall" content:objNotificationContent trigger:trigger];
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
     [center addNotificationRequest:request withCompletionHandler:^(NSError * _Nullable error) {
         if (error) {
             NSLog(@"Failed to send incoming call notification");
+        }
+        else {
+            if(ringtoneURL != nil) {
+                AudioServicesPlayAlertSound(ringtoneID);
+            }
         }
     }];
     
@@ -238,8 +261,14 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     UNNotificationResponse *response = [broadcastUserInfo objectForKey:@"notification"];
     
     NSDictionary *userInfo = response.notification.request.content.userInfo;
+    NSString *actionIdentifier = response.actionIdentifier;
+    NSString *categoryIdentifier = response.notification.request.content.categoryIdentifier;
     if (userInfo[kGCMMessageIDKey]) {
         NSLog(@"Message ID 2: %@", userInfo[kGCMMessageIDKey]);
+    }
+    
+    if([categoryIdentifier isEqualToString:incomingCallCategory.identifier]) {
+        [FCMPlugin.fcmPlugin notifyOfAction:actionIdentifier];
     }
     
     // Print full message.
