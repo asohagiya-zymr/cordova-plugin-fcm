@@ -104,16 +104,26 @@ static FCMPlugin *fcmPluginInstance;
     }
 }
 
--(void) notifyOfAction:(NSString *)actionIdentifier {
+-(void) notifyOfAction:(NSString *)actionIdentifier :(NSString *)uuid {
     if([actionIdentifier isEqualToString:@"INCOMING_CALL_ACCEPT_ACTION"]) {
         [AppDelegate stopRing];
         //Global variable in window can be used to handle accepting calls before initialization is complete
-        [self.webViewEngine evaluateJavaScript:@"window.callAccepted = true;FCMPlugin.call._callAcceptHandler();" completionHandler:nil];
+        [self.webViewEngine evaluateJavaScript:[NSString stringWithFormat:@"window.callAccepted = true;FCMPlugin.call._callAcceptHandler(%@);", uuid] completionHandler:nil];
     }
-    else if([actionIdentifier isEqualToString:@"INCOMING_CALL_DECLINE_ACTION"]) {
+    else if([actionIdentifier isEqualToString:@"INCOMING_CALL_DECLINE_ACTION"] || [actionIdentifier isEqualToString:UNNotificationDismissActionIdentifier]) {
         [AppDelegate stopRing];
         //Global variable in window can be used to handle declining calls before initialization is complete
-        [self.webViewEngine evaluateJavaScript:@"window.callDeclined = true;FCMPlugin.call._callDeclineHandler();" completionHandler:nil];
+        [self.webViewEngine evaluateJavaScript:[NSString stringWithFormat:@"window.callAccepted = true;FCMPlugin.call._callDeclineHandler(%@);", uuid] completionHandler:nil];
+    }
+    else if([actionIdentifier isEqualToString:UNNotificationDefaultActionIdentifier]) {
+        [AppDelegate stopRing];
+        [self.webViewEngine evaluateJavaScript:[NSString stringWithFormat:@"window.callAccepted = true;FCMPlugin.call._callOpenHandler(%@);", uuid] completionHandler:nil];
+    }
+    else if([actionIdentifier isEqualToString:@"CALL_MISSED_AUTOACTION"]){
+        [self.webViewEngine evaluateJavaScript:[NSString stringWithFormat:@"window.callAccepted = true;FCMPlugin.call._callMissedHandler(%@);", uuid] completionHandler:nil];
+    }
+    else if([actionIdentifier isEqualToString:@"CALL_DECLINE_AUTOACTION"]){
+        [self.webViewEngine evaluateJavaScript:[NSString stringWithFormat:@"window.callAccepted = true;FCMPlugin.call._callDeclineHandler(%@);", uuid] completionHandler:nil];
     }
     else {
         //default
@@ -230,18 +240,23 @@ static FCMPlugin *fcmPluginInstance;
 - (void) callStartRing:(CDVInvokedUrlCommand*)command {
     NSString* name = [command.arguments objectAtIndex:0];
     BOOL isVideo = [[command.arguments objectAtIndex:1] boolValue];
-    [AppDelegate startRing:isVideo withName:name];
+    NSString * uuid = [AppDelegate startRing:isVideo withName:name];
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:uuid];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 - (void) callStopRing:(CDVInvokedUrlCommand*)command {
+    NSString * uuid;
     if([command.arguments count] > 0) {
         BOOL isMissed = [[command.arguments objectAtIndex:0] boolValue];
         NSString* name = [command.arguments objectAtIndex:1];
         BOOL isVideo = [[command.arguments objectAtIndex:2] boolValue];
-        [AppDelegate stopRing:isMissed isVideo:isVideo from:name];
+        uuid = [AppDelegate stopRing:isMissed isVideo:isVideo from:name];
     }
     else {
-        [AppDelegate stopRing];
+        uuid = [AppDelegate stopRing];
     }
+    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:uuid];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 @end

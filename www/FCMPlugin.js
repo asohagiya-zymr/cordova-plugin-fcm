@@ -134,6 +134,14 @@ FCMPlugin.prototype.call._callDeclineHandler = function(){
     console.log("Call Accepted");
 }
 
+FCMPlugin.prototype.call._callOpenHandler = function(){
+    console.log("Call Notification Tapped");
+}
+
+FCMPlugin.prototype.call._callMissedHandler = function(){
+    console.log("Call Missed");
+}
+
 FCMPlugin.prototype.call.setCallAcceptHandler = function(callback, success, error) {
     if(typeof callback == "function") {
         FCMPlugin.prototype.call._callAcceptHandler = callback;
@@ -146,6 +154,24 @@ FCMPlugin.prototype.call.setCallAcceptHandler = function(callback, success, erro
 FCMPlugin.prototype.call.setCallDeclineHandler = function(callback, success, error) {
     if(typeof callback == "function") {
         FCMPlugin.prototype.call._callDeclineHandler = callback;
+        success();
+        return;
+    }
+    error();
+}
+
+FCMPlugin.prototype.call.setCallOpenHandler = function(callback, success, error) {
+    if(typeof callback == "function") {
+        FCMPlugin.prototype.call._callOpenHandler = callback;
+        success();
+        return;
+    }
+    error();
+}
+
+FCMPlugin.prototype.call.setCallMissedHandler = function(callback, success, error) {
+    if(typeof callback == "function") {
+        FCMPlugin.prototype.call._callMissedHandler = callback;
         success();
         return;
     }

@@ -38,6 +38,7 @@
 static NSData *lastPush;
 static Boolean isRinging;
 static Boolean stopRinging;
+static NSUUID *uuid;
 static AppDelegate *this;
 static UNNotificationCategory* incomingCallCategory;
 static NSURL *ringtoneURL;
@@ -146,17 +147,19 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
 
 //Incoming call presentation functions
 
-+ (void) startRing:(Boolean)isVideo withName:(NSString *)name {
++ (NSString*) startRing:(Boolean)isVideo withName:(NSString *)name {
+    uuid = [NSUUID UUID];
     
     //Mutex, prevent running start ring twice
     @synchronized (self) {
         if(isRinging) {
-            return;
+            return [uuid UUIDString];
         }
         
         isRinging = true;
     }
     [this ring:isVideo withName:name withCount:0];
+    return [uuid UUIDString];
 }
 
 + (void) stopRing:(Boolean) isMissed isVideo:(Boolean)isVideo from:(NSString *)name {
