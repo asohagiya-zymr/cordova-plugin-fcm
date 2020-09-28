@@ -203,7 +203,6 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
         }
     }
     
-    //TODO: set different title for video calls.
     UNMutableNotificationContent *objNotificationContent = [[UNMutableNotificationContent alloc] init];
     objNotificationContent.title = [NSString localizedUserNotificationStringForKey:isVideo ? @"Incoming Call" : @"Incoming Video Call" arguments:nil];
     objNotificationContent.body = [NSString localizedUserNotificationStringForKey:name arguments:nil];
