@@ -310,6 +310,10 @@ fetchCompletionHandler:(void (^)(UIBackgroundFetchResult result))completionHandl
         [AppDelegate startRing:(Boolean)userInfo[@"isVideo"] withName:(NSString *)userInfo[@"name"]];
     }
     else if([(NSString *)userInfo[@"type"] isEqualToString:@"stopIncomingCall"] && isRinging) {
+        dispatch_time_t executionTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(30 * NSEC_PER_SEC));
+        dispatch_after(executionTime, dispatch_get_main_queue(), ^(void){
+            completionHandler(UIBackgroundFetchResultNewData);
+        });
         [AppDelegate stopRing:true isVideo:(Boolean)userInfo[@"isVideo"] from:(NSString *)userInfo[@"name"]];
     }
     else {
