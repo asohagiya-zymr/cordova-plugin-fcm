@@ -139,6 +139,9 @@
 				<pod name="Firebase/Analytics" spec="5.0.0" />
 			</pods>
 		</podspec>
+
+		<!-- RESOURCES -->
+		<resource-file src="src/ios/audio/_blank.caf" target="Library/Sounds/_blank.caf"/>
     </platform>
 	
 	<!-- COPY FCM CONFIG FILES TO PLATFORM AFTER PLUGIN INSTALL OR PLATFORM PREPARE -->
