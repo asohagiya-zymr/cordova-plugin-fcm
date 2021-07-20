@@ -23,7 +23,7 @@
 // running iOS 10 and above. Implement FIRMessagingDelegate to receive data message via FCM for
 // devices running iOS 10 and above.
 #if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
-@interface AppDelegate () <FIRMessagingDelegate>
+@interface AppDelegate () <UNUserNotificationCenterDelegate,FIRMessagingDelegate>
 @end
 #endif
 
@@ -37,6 +37,17 @@
 static NSData *lastPush;
 static NSString *apnsToken;
 NSString *const kGCMMessageIDKey = @"gcm.message_id";
+
+
+- (void)messaging:(FIRMessaging *)messaging
+didReceiveRegistrationToken:(NSString *)fcmToken {
+    NSDictionary *dataDict = [NSDictionary dictionaryWithObject:fcmToken forKey:@"token"];
+    [[NSNotificationCenter defaultCenter] postNotificationName:
+     @"FCMToken" object:nil userInfo:dataDict];
+}
+- (void)messaging:(FIRMessaging *)messaging didReceiveMessage:(FIRMessagingRemoteMessage *)remoteMessage{
+    NSLog(@"Device APNS Token@");
+}
 
 //Method swizzling
 + (void)load
@@ -53,9 +64,9 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
         deviceToken = [self hexadecimalStringFromData:deviceTokenData];
     } else {
         deviceToken = [[[[deviceTokenData description]
-            stringByReplacingOccurrencesOfString:@"<"withString:@""]
-            stringByReplacingOccurrencesOfString:@">" withString:@""]
-            stringByReplacingOccurrencesOfString:@" " withString:@""];
+                         stringByReplacingOccurrencesOfString:@"<"withString:@""]
+                        stringByReplacingOccurrencesOfString:@">" withString:@""]
+                       stringByReplacingOccurrencesOfString:@" " withString:@""];
     }
     apnsToken = deviceToken;
     [FCMPlugin setInitialAPNSToken:deviceToken];
@@ -67,7 +78,7 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     if (dataLength == 0) {
         return nil;
     }
-
+    
     const unsigned char *dataBuffer = data.bytes;
     NSMutableString *hexString  = [NSMutableString stringWithCapacity:(dataLength * 2)];
     for (int i = 0; i < dataLength; ++i) {
@@ -77,11 +88,11 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
 }
 
 - (BOOL)application:(UIApplication *)application customDidFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-
+    
     [self application:application customDidFinishLaunchingWithOptions:launchOptions];
-
+    
     NSLog(@"DidFinishLaunchingWithOptions");
- 
+    
     
     // Register for remote notifications. This shows a permission dialog on first run, to
     // show the dialog at a more appropriate time move this registration accordingly.
@@ -102,6 +113,14 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
         } else {
             // iOS 10 or later
 #if defined(__IPHONE_10_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0
+            UNAuthorizationOptions authOptions =
+            UNAuthorizationOptionAlert
+            | UNAuthorizationOptionSound
+            | UNAuthorizationOptionBadge;
+            [[UNUserNotificationCenter currentNotificationCenter] requestAuthorizationWithOptions:authOptions completionHandler:^(BOOL granted, NSError * _Nullable error) {
+            }];
+                      // For iOS 10 display notification (sent via APNS)
+            [UNUserNotificationCenter currentNotificationCenter].delegate = self;
             // For iOS 10 data message (sent via FCM)
             [FIRMessaging messaging].delegate = self;
 #endif
@@ -110,7 +129,7 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
         [[UIApplication sharedApplication] registerForRemoteNotifications];
         // [END register_for_notifications]
     }
-
+    
     // [START configure_firebase]
     [FIRApp configure];
     // [END configure_firebase]
@@ -130,6 +149,42 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
 }
 
 // [START message_handling]
+
+// Receive displayed notifications for iOS 10 devices.
+// Handle incoming notification messages while app is in the foreground.
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+       willPresentNotification:(UNNotification *)notification
+         withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler {
+    NSDictionary *userInfo = notification.request.content.userInfo;
+    if (userInfo[kGCMMessageIDKey]) {
+        NSLog(@"Message ID 1: %@", userInfo[kGCMMessageIDKey]);
+    }
+    NSError *error;
+    NSDictionary *userInfoMutable = [userInfo mutableCopy];
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:userInfoMutable
+                                                       options:0
+                                                         error:&error];
+    [FCMPlugin.fcmPlugin notifyOfMessage:jsonData];
+}
+
+// Handle notification messages after display notification is tapped by the user.
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+didReceiveNotificationResponse:(UNNotificationResponse *)response
+         withCompletionHandler:(void(^)(void))completionHandler {
+    NSDictionary *userInfo = response.notification.request.content.userInfo;
+    
+    if (userInfo[kGCMMessageIDKey]) {
+        NSLog(@"Message ID 2: %@", userInfo[kGCMMessageIDKey]);
+    }
+    NSError *error;
+    NSDictionary *userInfoMutable = [userInfo mutableCopy];
+    [userInfoMutable setValue:@(YES) forKey:@"wasTapped"];
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:userInfoMutable
+                                                       options:0
+                                                         error:&error];
+    NSLog(@"APP WAS CLOSED DURING PUSH RECEPTION Saved data: %@", jsonData);
+    lastPush = jsonData;
+}
 
 // Handle incoming notification messages while app is in the foreground.
 - (void) receiveWillPresentNotification:(NSNotification *) notification {
@@ -151,9 +206,6 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
                                                        options:0
                                                          error:&error];
     [FCMPlugin.fcmPlugin notifyOfMessage:jsonData];
-    
-    // Change this to your preferred presentation option
-    //completionHandler(UNNotificationPresentationOptionNone);
 }
 
 // Handle notification messages after display notification is tapped by the user.
@@ -172,16 +224,16 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     NSError *error;
     NSDictionary *userInfoMutable = [userInfo mutableCopy];
     
-
-        NSLog(@"New method with push callback: %@", userInfo);
-        
-        [userInfoMutable setValue:@(YES) forKey:@"wasTapped"];
-        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:userInfoMutable
-                                                           options:0
-                                                             error:&error];
-        NSLog(@"APP WAS CLOSED DURING PUSH RECEPTION Saved data: %@", jsonData);
-        lastPush = jsonData;
-
+    
+    NSLog(@"New method with push callback: %@", userInfo);
+    
+    [userInfoMutable setValue:@(YES) forKey:@"wasTapped"];
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:userInfoMutable
+                                                       options:0
+                                                         error:&error];
+    NSLog(@"APP WAS CLOSED DURING PUSH RECEPTION Saved data: %@", jsonData);
+    lastPush = jsonData;
+    
     
     //completionHandler();
 }
@@ -197,7 +249,7 @@ NSString *const kGCMMessageIDKey = @"gcm.message_id";
     [FCMPlugin.fcmPlugin notifyOfTokenRefresh:refreshedToken];
     // Connect to FCM since connection may have failed when attempted before having a token.
     [self connectToFcm];
-
+    
     // TODO: If necessary send token to appliation server.
 }
 // [END refresh_token]
